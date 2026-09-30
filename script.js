@@ -19,7 +19,42 @@ function mapTrain(x){return {id:x.id,trainNumber:x.train_number,trainName:x.trai
 function mode(x,b){document.querySelectorAll('.tabs button').forEach(y=>y.classList.remove('active'));b.classList.add('active');$('routeBox').classList.toggle('hidden',x!=='route');$('trainBox').classList.toggle('hidden',x!=='train')}
 function places(w){const q=$(w).value.trim().toLowerCase();const a=cities.filter(x=>x.toLowerCase().includes(q)).slice(0,6);$(w+'Sug').innerHTML=q?a.map(x=>`<div onclick="pick('${w}','${x}')">📍 ${x}</div>`).join(''):''}
 function pick(w,x){$(w).value=x;$(w+'Sug').innerHTML=''} function swap(){const x=$('from').value;$('from').value=$('to').value;$('to').value=x}
-async function searchRoute(){const f=$('from').value.trim(),t=$('to').value.trim();if(!f||!t)return alert('Enter both From and To cities.');if(f.toLowerCase()===t.toLowerCase())return alert('From and To cities must be different.');const {data,error}=await supabaseClient.from('trains').select('*').ilike('source',f).ilike('destination',t).order('id');if(error)return alert(error.message);visibleTrains=(data||[]).map(mapTrain);$('result').textContent=`${f} → ${t}`;render(visibleTrains);$('trains').scrollIntoView({behavior:'smooth'})}
+
+async function searchRoute(){
+  const f=$('from').value.trim();
+  const t=$('to').value.trim();
+
+  if(!f||!t)
+    return alert('Enter both From and To cities.');
+
+  if(f.toLowerCase()===t.toLowerCase())
+    return alert('From and To cities must be different.');
+
+  const fromCity=cities.find(x=>x.toLowerCase()===f.toLowerCase());
+  const toCity=cities.find(x=>x.toLowerCase()===t.toLowerCase());
+
+  if(!fromCity||!toCity)
+    return alert('Please select From and To cities from the suggestions.');
+
+  const {data,error}=await supabaseClient
+    .from('trains')
+    .select('*')
+    .ilike('source',fromCity)
+    .ilike('destination',toCity)
+    .order('id');
+
+  if(error)
+    return alert(error.message);
+
+  visibleTrains=(data||[]).map(mapTrain);
+
+  $('result').textContent=`${fromCity} → ${toCity}`;
+
+  render(visibleTrains);
+
+  $('trains').scrollIntoView({behavior:'smooth'});
+}
+
 function trainSug(){const q=$('query').value.trim().toLowerCase();const a=allTrains.filter(x=>x.trainName.toLowerCase().includes(q)||x.trainNumber.includes(q)).slice(0,8);$('trainSug').innerHTML=q?a.map(x=>`<div onclick="pickTrain('${x.trainNumber}')">🚆 ${escapeHtml(x.trainName)}<small>${x.trainNumber} • ${escapeHtml(x.source)} → ${escapeHtml(x.destination)}</small></div>`).join(''):''}
 function pickTrain(n){const x=allTrains.find(y=>y.trainNumber===n);if(x){$('query').value=x.trainName;$('trainSug').innerHTML=''}}
 async function searchTrain(){const q=$('query').value.trim();if(!q)return alert('Enter a train name or train number.');const {data,error}=await supabaseClient.from('trains').select('*').or(`train_name.ilike.%${q}%,train_number.ilike.%${q}%`).order('id');if(error)return alert(error.message);visibleTrains=(data||[]).map(mapTrain);$('result').textContent='Train search: '+q;render(visibleTrains);$('trains').scrollIntoView({behavior:'smooth'})}
